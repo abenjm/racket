@@ -2,83 +2,92 @@
 
 (Section 'error)
 
-;; ----- raise-argument-error variants ----- ;;
+;; ----- raise-argument-error forms ----- ;;
 
-;; (raise-argument-error 'variant-1 "value expected" 'other-value)
-(let ()
-    (define expected-message "variant-1: contract violation\n  expected: value expected\n  given: 'other-value")
-    (define actual-message (with-handlers ([exn? (lambda (e) (exn-message e))]) 
-				(raise-argument-error 'variant-1 "value-expected" 'other-value)))
+(err/rt-test (raise-argument-error 'form-1 "expected?" 'other) 
+             exn:fail:contract? 
+             #rx"form-1: contract violation\n  expected: expected\\?\n  given: 'other")
 
-    (test #t 'raise-argument-error/variant-1 (string=? expected-message actual-message)))
+(err/rt-test (raise-argument-error 'form-2a "expected?" 0 'other) 
+             exn:fail:contract? 
+             #rx"form-2a: contract violation\n  expected: expected\\?\n  given: 'other")
 
-;; ----- raise-type-error variants ----- ;;
+(err/rt-test (raise-argument-error 'form-2b "expected?" 2 'other1 'other2 'other3) 
+             exn:fail:contract? 
+             #rx"form-2b: contract violation\n  expected: expected\\?\n  given: 'other3\n  argument position: 3rd\n  other arguments...:\n   'other1\n   'other2")
 
-(let ()
-    (define expected-message "variant-1: expected argument of type <expected?>; given: 'other")
-    (define actual-message (with-handlers ([exn? (lambda (e) (exn-message e))]) 
-				(raise-type-error 'variant-1 "expected?" 'other)))
+;; Check expected exceptions when the forms are misused.
 
-    (test #t 'raise-type-error/variant-1 (string=? expected-message actual-message)))
+(err/rt-test (raise-argument-error 'form-1a "expected?") 
+             exn:fail:contract:arity?
+             #rx"raise-argument-error: arity mismatch")
 
-(let ()
-    (define expected-message "variant-2a: expects argument of type <expected?>; given: 'other")
-    (define actual-message (with-handlers ([exn? (lambda (e) (exn-message e))]) 
-				(raise-type-error 'variant-2a "expected?" 0 'other)))
+(err/rt-test (raise-argument-error "form-1b" "expected?" 'other)
+             exn:fail:contract?
+             #rx"raise-argument-error: contract violation\n  expected: symbol\\?")
 
-    (test #t 'raise-type-error/variant-2a (string=? expected-message actual-message)))
+(err/rt-test (raise-argument-error 'form-1c 'expected? 'other)
+             exn:fail:contract?
+             #rx"raise-argument-error: contract violation\n  expected: string\\?")
 
-(let ()
-    (define expected-message "variant-2b: expects type <expected?> as 2nd argument, given: 'other2; other arguments were: 'other1 'other3")
-    (define actual-message (with-handlers ([exn? (lambda (e) (exn-message e))]) 
-				(raise-type-error 'variant-2b "expected?" 1 'other1 'other2 'other3)))
+;; ----- raise-type-error forms ----- ;;
 
-    (test #t 'raise-type-error/variant-2b (string=? expected-message actual-message)))
+(err/rt-test (raise-type-error 'form-1 "expected?" 'other)
+             exn:fail:contract? 
+             #rx"form-1: expected argument of type <expected\\?>; given: 'other")
 
-;; Check expected exceptions when variants are misused.
+(err/rt-test (raise-type-error 'form-2a "expected?" 0 'other)
+             exn:fail:contract?
+             #rx"form-2a: expects argument of type <expected\\?>; given: 'other")
 
-(test #t 'raise-type-error/variant-1-arity-exn 
-	(with-handlers ([exn:fail:contract:arity? (lambda (e) #t)])
-        	(raise-type-error 'variant-1 "expected?")))
+(err/rt-test (raise-type-error 'form-2b "expected?" 1 'other1 'other2 'other3)
+             exn:fail:contract?
+             #rx"form-2b: expects type <expected\\?> as 2nd argument, given: 'other2; other arguments were: 'other1 'other3")
 
-(test #t 'raise-type-error/variant-1a-contract-exn 
-	(with-handlers ([exn:fail:contract? (lambda (e) #t)])
-        	(raise-type-error "variant-1a" "expected?" 'other)))
+;; Check expected exceptions when the forms are misused.
 
-(test #t 'raise-type-error/variant-1b-contract-exn 
-	(with-handlers ([exn:fail:contract? (lambda (e) #t)])
-        	(raise-type-error 'variant-1b 'expected? 'other)))
+(err/rt-test (raise-type-error 'form-1a "expected?") 
+             exn:fail:contract:arity?
+             #rx"raise-type-error: arity mismatch")
 
-(test #t 'raise-type-error/variant-2a-contract-exn 
-	(with-handlers ([exn:fail:contract? (lambda (e) #t)])
-        	(raise-type-error "variant-2a" "expected?" 0 'other)))
+(err/rt-test (raise-type-error "form-1b" "expected?" 'other) 
+             exn:fail:contract?
+             #rx"raise-type-error: contract violation\n  expected: symbol\\?")
 
-(test #t 'raise-type-error/variant-2b-contract-exn 
-	(with-handlers ([exn:fail:contract? (lambda (e) #t)])
-        	(raise-type-error 'variant-2b 'expected? 0 'other)))
+(err/rt-test (raise-type-error 'form-1c 'expected? 'other) 
+             exn:fail:contract?
+             #rx"raise-type-error: contract violation\n  expected: string\\?")
 
-(test #t 'raise-type-error/variant-2c-contract-exn 
-	(with-handlers ([exn:fail:contract? (lambda (e) #t)])
-        	(raise-type-error 'variant-2c "expected?" 'NaN 'other)))
+(err/rt-test (raise-type-error "form-2a" "expected?" 0 'other) 
+             exn:fail:contract?
+             #rx"raise-type-error: contract violation\n  expected: symbol\\?")
 
-(test #t 'raise-type-error/variant-2d-contract-exn 
-	(with-handlers ([exn:fail:contract? (lambda (e) #t)])
-        	(raise-type-error 'variant-2d "expected?" 1 'other)))
+(err/rt-test (raise-type-error 'form-2b 'expected? 0 'other)
+             exn:fail:contract? 
+             #rx"raise-type-error: contract violation\n  expected: string\\?")
 
-(test #t 'raise-type-error/variant-2e-contract-exn 
-	(with-handlers ([exn:fail:contract? (lambda (e) #t)])
-        	(raise-type-error "variant-2e" "expected?" 1 'other1 'other2)))
+(err/rt-test (raise-type-error 'form-2c "expected?" 'NaN 'other) 
+             exn:fail:contract? 
+             #rx"raise-type-error: contract violation\n  expected: exact-nonnegative-integer\\?")
 
-(test #t 'raise-type-error/variant-2f-contract-exn
-	(with-handlers ([exn:fail:contract? (lambda (e) #t)])
-        	(raise-type-error 'variant-2f 'expected? 1 'other1 'other2)))
+(err/rt-test (raise-type-error 'form-2d "expected?" 1 'other) 
+             exn:fail:contract?
+             #rx"raise-type-error: position index >= provided argument count")
 
-(test #t 'raise-type-error/variant-2g-contract-exn
-	(with-handlers ([exn:fail:contract? (lambda (e) #t)])
-        	(raise-type-error 'variant-2g "expected?" 'NaN 'other1 'other2)))
+(err/rt-test (raise-type-error "form-2e" "expected?" 1 'other1 'other2) 
+             exn:fail:contract? 
+             #rx"raise-type-error: contract violation\n  expected: symbol\\?")
 
-(test #t 'raise-type-error/variant-2h-contract-exn
-	(with-handlers ([exn:fail:contract? (lambda (e) #t)])
-        	(raise-type-error 'variant-2h "expected?" 3 'other1 'other2)))
+(err/rt-test (raise-type-error 'form-2f 'expected? 1 'other1 'other2) 
+             exn:fail:contract? 
+             #rx"raise-type-error: contract violation\n  expected: string\\?")
+
+(err/rt-test (raise-type-error 'form-2g "expected?" 'NaN 'other1 'other2) 
+             exn:fail:contract? 
+             #rx"raise-type-error: contract violation\n  expected: exact-nonnegative-integer\\?")
+
+(err/rt-test (raise-type-error 'form-2h "expected?" 3 'other1 'other2) 
+             exn:fail:contract? 
+             #rx"raise-type-error: position index >= provided argument count")
 
 (report-errs)

@@ -1833,9 +1833,9 @@ static const char *indent_lines(const char *s, intptr_t *_len, int initial_inden
   return s;
 }
 
-static void wrong_describe_contract(const char *name, const char *descr, const char *expected,
-                                    int which, int argc,
-                                    Scheme_Object **argv)
+static void wrong_contract_with_description(const char *name, const char *descr, const char *expected,
+                                            int which, int argc,
+                                            Scheme_Object **argv)
 {
   Scheme_Object *o;
   char *s;
@@ -1923,7 +1923,7 @@ void scheme_wrong_contract(const char *name, const char *expected,
                            int which, int argc,
                            Scheme_Object **argv)
 {
-  wrong_describe_contract(name, NULL, expected, which, argc, argv);
+  wrong_contract_with_description(name, NULL, expected, which, argc, argv);
 }
 
 void scheme_wrong_field_type(Scheme_Object *c_name,
@@ -2785,8 +2785,8 @@ static Scheme_Object *do_raise_type_error(const char *name, int argc, Scheme_Obj
     v = argv[2];
     s = scheme_char_string_to_byte_string(argv[1]);
     scheme_wrong_type(scheme_symbol_val(argv[0]),
-          SCHEME_BYTE_STR_VAL(s),
-          negate ? -2 : -1, 0, &v);
+                      SCHEME_BYTE_STR_VAL(s),
+                      -1, 0, &v);
   } else {
     Scheme_Object **args, *s;
     int i;
@@ -2798,11 +2798,9 @@ static Scheme_Object *do_raise_type_error(const char *name, int argc, Scheme_Obj
     if ((SCHEME_INTP(argv[2]) && (SCHEME_INT_VAL(argv[2]) >= argc - 3))
 	|| SCHEME_BIGNUMP(argv[2]))
       scheme_contract_error(name,
-                            (negate
-                             ? "position index >= provided result count"
-                             : "position index >= provided argument count"),
+                            "position index >= provided argument count",
                             "position index", 1, argv[2],
-                            (negate ? "provided result count" : "provided argument count"), 
+                            "provided argument count", 
                             1, 
                             scheme_make_integer(argc - 3),
                             NULL);
@@ -2817,7 +2815,7 @@ static Scheme_Object *do_raise_type_error(const char *name, int argc, Scheme_Obj
     scheme_wrong_type(scheme_symbol_val(argv[0]),
                       SCHEME_BYTE_STR_VAL(s),
                       SCHEME_INT_VAL(argv[2]),
-                      negate ? (3 - argc) : (argc - 3), args);
+                      (argc - 3), args);
   }
 
   return NULL;
@@ -2841,10 +2839,12 @@ static Scheme_Object *do_raise_argument_error(const char *name, int argc, Scheme
 
     v = argv[2];
     s = scheme_char_string_to_byte_string(argv[1]);
-    wrong_describe_contract(scheme_symbol_val(argv[0]),
-                            NULL,
-                            SCHEME_BYTE_STR_VAL(s),
-                            negate ? -2 : -1, 0, &v);
+    wrong_contract_with_description(scheme_symbol_val(argv[0]),
+                                    NULL,
+                                    SCHEME_BYTE_STR_VAL(s),
+                                    negate ? -2 : -1, 
+				    0, 
+				    &v);
   }
   else {
     Scheme_Object **args, *s;
@@ -2874,11 +2874,12 @@ static Scheme_Object *do_raise_argument_error(const char *name, int argc, Scheme
 
       s = scheme_char_string_to_byte_string(argv[1]);
 
-      wrong_describe_contract(scheme_symbol_val(argv[0]),
-                              NULL,
-                              SCHEME_BYTE_STR_VAL(s),
-                              SCHEME_INT_VAL(argv[2]),
-                              negate ? (3 - argc) : (argc - 3), args);
+      wrong_contract_with_description(scheme_symbol_val(argv[0]),
+                                      NULL,
+                                      SCHEME_BYTE_STR_VAL(s),
+                                      SCHEME_INT_VAL(argv[2]),
+                                      negate ? (3 - argc) : (argc - 3), 
+				      args);
     }
     else {
       Scheme_Object *v, *d, *s;
@@ -2892,10 +2893,12 @@ static Scheme_Object *do_raise_argument_error(const char *name, int argc, Scheme
       v = argv[3];
       d = scheme_char_string_to_byte_string(argv[1]);
       s = scheme_char_string_to_byte_string(argv[2]);
-      wrong_describe_contract(scheme_symbol_val(argv[0]),
-                              SCHEME_BYTE_STR_VAL(d),
-                              SCHEME_BYTE_STR_VAL(s),
-                              negate ? -2 : -1, 0, &v);
+      wrong_contract_with_description(scheme_symbol_val(argv[0]),
+                                      SCHEME_BYTE_STR_VAL(d),
+                                      SCHEME_BYTE_STR_VAL(s),
+                                      negate ? -2 : -1, 
+				      0, 
+				      &v);
     }
   }
 

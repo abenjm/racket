@@ -1,5 +1,5 @@
 (module error-reporting "pre-base.rkt"
-  (#%require racket/private/struct)
+  (#%require "struct.rkt")
   (#%provide error-report
              error-report?
              short-field

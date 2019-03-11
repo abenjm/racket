@@ -1,22 +1,21 @@
 (module error-reporting "pre-base.rkt"
   (#%require racket/private/struct)
   (#%provide error-report
-           error-report?
-           short-field
-           short-field?
-           long-field
-           long-field?
-           ellipsis-field
-           ellipsis-field?
-           error-report->string
-           exn:fail:contract/error-report
-           expected-short-field
-           expected-long-field
-           given-short-field
-           given-long-field)
+             error-report?
+             short-field
+             short-field?
+             long-field
+             long-field?
+             ellipsis-field
+             ellipsis-field?
+             error-report->string
+             exn:fail:contract/error-report
+             expected-short-field
+             expected-long-field
+             given-short-field
+             given-long-field)
 
-  ;; To-dos add test cases! and do better job of appending line breaks to avoid
-  ;; one extra break at the end.
+  ;; To-dos add test cases!
 
   ;; Control how long error details can be in error reporting output.
   (define error-detail-print-width
@@ -127,11 +126,12 @@
   ;; character is replaced by another break character that is postfixed with appropriate
   ;; amount of whitespace for <continued-message> grammar form.
   (define (continued-messages-format cms)
-    (define cms-format-string " ~a\n")
+    (define cms-format-string " ~a")
     (apply string-append (map (lambda (m)
-                                (cond
-                                  [(string? m) (format cms-format-string (regexp-replace* #rx"\n" m "\n "))]
-                                  [else (format cms-format-string m)]))
+                                (string-append "\n"
+                                               (cond
+                                                 [(string? m) (format cms-format-string (regexp-replace* #rx"\n" m "\n "))]
+                                                 [else (format cms-format-string m)])))
                               cms)))
 
   ;; short-field-format : short-field? -> string?
@@ -139,23 +139,23 @@
   ;; If it's too long, meaning its printed
   ;; representation exceeds error-detail-print-width then it's converted to
   ;; long-field prior to formatting.
-  (define (short-field-format sf)
+  (define (short-field-format sf)    
     (if (too-long? sf)
         (long-field-format (short-field->long-field sf))
-        (format "  ~a: ~v\n" (error-field-label sf) (error-field-detail sf))))
+        (format "  ~a: ~v" (error-field-label sf) (error-field-detail sf))))
 
   ;; long-field-format : long-field? -> string?
   ;; Format long-field for error reporting output.
   (define (long-field-format lf)
-    (apply string-append (list* (format "  ~a:\n" (error-field-label lf))
-                                (map (lambda (d) (format "   ~v\n" d))
+    (apply string-append (list* (format "  ~a:" (error-field-label lf))
+                                (map (lambda (d) (string-append "\n" (format "   ~v" d)))
                                      (error-field-detail lf)))))                               
 
   ;; ellipsis-field-format : ellipsis-field? -> string?
   ;; Format ellipsis-field for error reporting output.
   (define (ellipsis-field-format cf)
-    (apply string-append (list* (format "  ~a...:\n" (error-field-label cf))
-                                (map (lambda (d) (format "   ~v\n" d))
+    (apply string-append (list* (format "  ~a...:" (error-field-label cf))
+                                (map (lambda (d) (string-append "\n" (format "   ~v" d)))
                                      (error-field-detail cf)))))
 
   ;; too-long? : any/c -> boolean?
@@ -175,9 +175,10 @@
 
   ;; fields-format : (Listof error-field?) -> string?
   (define (fields-format fs)
-    (apply string-append (map (lambda (f) (cond [(short-field? f) (short-field-format f)]
-                                                [(long-field? f) (long-field-format f)]
-                                                [(ellipsis-field? f) (ellipsis-field-format f)]))
+    (apply string-append (map (lambda (f) (string-append "\n"
+                                                         (cond [(short-field? f) (short-field-format f)]
+                                                               [(long-field? f) (long-field-format f)]
+                                                               [(ellipsis-field? f) (ellipsis-field-format f)])))
                               fs)))
 
   ;; exn:fail:contract/error-report : error-report? continuation-mark-set? -> exn:fail:contract?
@@ -196,7 +197,7 @@
 
     (define srcloc-string (if (absent? srcloc) "" (format "~v: " (srcloc->string srcloc))))
     (define name-string (if (absent? name) "" (format "~a: " name)))
-    (define message-string (if (absent? message) "" (string-append (format "~a" message) (if (absent? continued-messages) "" ";") "\n")))
+    (define message-string (if (absent? message) "" (string-append (format "~a" message) (if (absent? continued-messages) "" ";"))))
     (define continued-messages-string (if (absent? continued-messages) "" (continued-messages-format continued-messages)))
     (define fields-string (if (absent? fields) "" (fields-format fields)))
 

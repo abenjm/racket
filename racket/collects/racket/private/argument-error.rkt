@@ -1,10 +1,9 @@
 (module argument-error "pre-base.rkt"
 
-  ; module implements new raise-argument-error and its two forms
   ; module implements new raise-argument-error and its two forms and extends it with
   ; #:more-info to support adding more details to the exception error output.
 
-  (provide (rename-out [new-raise-argument-error raise-argument-error]))
+  (provide raise-argument-error)
 
   ;;; -----------------------------------------------------------------------------------------
   ;;; implementation section
@@ -155,17 +154,17 @@
   ;; --------------------------------------------
   ;; raise-argument-error implementation section
 
-  ; new-raise-argument-error : symbol?
-  ;                            string?
-  ;                            any/c
-  ;                            [#:more-info (or/c string? #f)]
-  ;                            [(listof any/c)]
-  ;                            ->
+  ; raise-argument-error : symbol?
+  ;                        string?
+  ;                        any/c
+  ;                        [#:more-info (or/c string? #f)]
+  ;                        [(listof any/c)]
+  ;                        ->
   ;
   ; Replacement for the primitive `raise-argument-error`.
   ; Enchanced with addition of #:more-info keyword to include more details about the
   ; argument in the exception's reported error output.
-  (define (new-raise-argument-error name expected v #:more-info [more-info #f] . other-vs)
+  (define (raise-argument-error name expected v #:more-info [more-info #f] . other-vs)
     (unless (symbol? name)
       (raise-multiple-arguments-error 'raise-argument-error
                                       "symbol?"

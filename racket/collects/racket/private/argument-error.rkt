@@ -15,7 +15,7 @@
   ;; --------------------------------------------
   ;; helper section
   
-  (define (raise-one-argument-error name expected v [more-info #f])
+  (define (raise-one-argument-error name expected v [more-info #f] [cmarks (current-continuation-marks)])
     (raise
      (exn:fail:contract/error-report (error-report (absent)
                                                    name
@@ -23,7 +23,7 @@
                                                    (if more-info (list more-info) (absent))
                                                    (list (expected-short-field expected)
                                                          (given-short-field v)))
-                                     (current-continuation-marks))))
+                                     cmarks)))
   
 
   ; make-bad-positional-argument-section : string?
@@ -99,6 +99,7 @@
   ;                                  (or/c (listof any/c) (listof (cons keyword? any/c)))
   ;                                  (or/c (listof any/c) (listof (cons keyword? any/c)))
   ;                                  (or/c string? #f)
+  ;                                  continuation-mark-set?
   ;                                  ->
   ;
   ; raise contract exception containing detailed information about bad argument and other
@@ -111,7 +112,7 @@
   ; other-vs is either a list of positional or a list of keyword arguments that are to be reported
   ; in the output along with the bad argument information. It is assumed if bad argument
   ; is for a positional argument then other-vs must be a list of keyword arguments, or vice versa.
-  (define (raise-multiple-arguments-error name expected bad vs other-vs [more-info #f])
+  (define (raise-multiple-arguments-error name expected bad vs other-vs [more-info #f] [cmarks (current-continuation-marks)])
     (define-values (expected-field given-field bad-arg-indicator-field other-args-field)
       (cond [(keyword? bad) (make-bad-keyword-argument-section expected bad vs)]
             [else (make-bad-positional-argument-section expected bad vs)]))
@@ -135,13 +136,14 @@
                                                    "contract violation"
                                                    (if more-info (list more-info) (absent))
                                                    error-fields)
-                                     (current-continuation-marks))))
+                                     cmarks)))
 
   ; raise-arguments-index-out-of-bounds : symbol?
   ;                                       exact-nonnegative-integer?
   ;                                       exact-nonnegative-integer?
+  ;                                       continuation-mark-set?
   ;                                       ->
-  (define (raise-arguments-index-out-of-bounds-error name index args-c)
+  (define (raise-arguments-index-out-of-bounds-error name index args-c [cmarks (current-continuation-marks)])
     (raise
      (exn:fail:contract/error-report (error-report (absent)
                                                    name
@@ -149,7 +151,7 @@
                                                    (absent)
                                                    (list (short-field "position index" index)
                                                          (short-field "provided argument count" args-c)))
-                                     (current-continuation-marks))))
+                                     cmarks)))
 
   ;; --------------------------------------------
   ;; raise-argument-error implementation section
@@ -172,7 +174,9 @@
                                       ; report positional args
                                       (list* name expected v other-vs)
                                       ; also report #:more-info keyword arg if it was provided
-                                      (if more-info (list (cons '#:more-info more-info)) '())))
+                                      (if more-info (list (cons '#:more-info more-info)) '())
+                                      #f
+                                      (current-continuation-marks)))
     (unless (string? expected)
       (raise-multiple-arguments-error 'raise-argument-error
                                       "string?"
@@ -180,7 +184,9 @@
                                       ; report positional args
                                       (list* name expected v other-vs)
                                       ; also report #:more-info keyword arg if it was provided
-                                      (if more-info (list (cons '#:more-info more-info)) '())))
+                                      (if more-info (list (cons '#:more-info more-info)) '())
+                                      #f
+                                      (current-continuation-marks)))
     (unless (or (not more-info) (string? more-info))
       (raise-multiple-arguments-error 'raise-argument-error
                                       "string?"
@@ -188,11 +194,13 @@
                                       ; report keyword args
                                       (list (cons '#:more-info more-info))
                                       ; also report positional args
-                                      (list* name expected v other-vs)))
+                                      (list* name expected v other-vs)
+                                      #f
+                                      (current-continuation-marks)))
 
     (cond [(null? other-vs)
            ; no extra vs supplied so assume first form of `raise-argument-error`
-           (raise-one-argument-error name expected v more-info)]
+           (raise-one-argument-error name expected v more-info (current-continuation-marks))]
           ; otherwise assume second form of `raise-argument-error` so
           ; v must be exact-nonnegative-integer? representing position of the arguments
           [else
@@ -203,16 +211,23 @@
                                              ; report positional args
                                              (list* name expected v other-vs)
                                              ; also report #:more-info keyword arg if it was provided
-                                             (if more-info (list (cons '#:more-info more-info)) '())))
+                                             (if more-info (list (cons '#:more-info more-info)) '())
+                                             #f
+                                             (current-continuation-marks)))
            (define other-vs-length (length other-vs))
            (unless (< v other-vs-length)
-             (raise-arguments-index-out-of-bounds-error 'raise-argument-error v other-vs-length))
+             (raise-arguments-index-out-of-bounds-error 'raise-argument-error v other-vs-length (current-continuation-marks)))
            (if (= other-vs-length 1)
-               (raise-one-argument-error name expected (car other-vs) more-info)
+               (raise-one-argument-error name
+                                         expected
+                                         (car other-vs)
+                                         more-info
+                                         (current-continuation-marks))
                (raise-multiple-arguments-error name
                                                expected
                                                v
                                                other-vs
                                                '()
-                                               more-info))]))
+                                               more-info
+                                               (current-continuation-marks)))]))
   )

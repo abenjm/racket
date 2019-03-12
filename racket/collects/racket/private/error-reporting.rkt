@@ -1,21 +1,22 @@
 (module error-reporting "pre-base.rkt"
-  (#%require "struct.rkt")
-  (#%provide error-report
-             error-report?
-             short-field
-             short-field?
-             long-field
-             long-field?
-             ellipsis-field
-             ellipsis-field?
-             error-report->string
-             exn:fail:contract/error-report
-             expected-short-field
-             expected-long-field
-             given-short-field
-             given-long-field)
-
-  ;; To-dos add test cases!
+  (require "struct.rkt")
+  (provide error-report
+           error-report?
+           (rename-out [make-short-field short-field])
+           short-field?
+           (rename-out [make-long-field long-field])
+           long-field?
+           (rename-out [make-ellipsis-field ellipsis-field])
+           ellipsis-field?
+           error-field?
+           absent
+           absent?
+           error-report->string
+           exn:fail:contract/error-report
+           expected-short-field
+           expected-long-field
+           given-short-field
+           given-long-field)
 
   ;; Control how long error details can be in error reporting output.
   (define error-detail-print-width
@@ -53,33 +54,45 @@
   ;; struct error-field
   ;; label : String/c
   ;; detail : Any/c
-  (struct error-field (label detail)
+  ;; detailfs (detail-format-style) : (or/c '~a '~v)
+  (struct error-field (label detail detailfs)
     #:transparent
-    #:guard (lambda (label detail struct-name)
+    #:guard (lambda (label detail detailfs struct-name)
               (unless (string? label)
-                (raise-argument-error struct-name "String/c" 0 label detail))
-              (values label detail)))
+                (raise-argument-error struct-name "String/c" 0 label detail detailfs))
+              (unless (or (eq? detailfs '~a) (eq? detailfs '~v))
+                (raise-argument-error struct-name "(or/c '~a '~v)" 2 label detail detailfs))
+              (values label detail detailfs)))
+
+  ;; ~v is the default printing style for the field detail
+  ;; but allow ~a to be specified instead if desired.
+  (define (make-constructor-with-optional-detailfs struct-name)
+    (lambda (label detail [detailfs '~v])
+      (struct-name label detail detailfs)))
   
   ;; struct short-field  
-  (struct short-field error-field () #:transparent)
+  (struct short-field error-field () #:transparent)  
+  (define make-short-field (make-constructor-with-optional-detailfs short-field))
 
   ;; struct long-field  
   ;; detail : (Listof Any/c)
   (struct long-field error-field ()
     #:transparent
-    #:guard (lambda (label detail struct-name)
+    #:guard (lambda (label detail detailfs struct-name)
               (unless (list? detail)
                 (raise-argument-error struct-name "(Listof Any/c)" 1 label detail))
-              (values label detail)))
+              (values label detail detailfs)))  
+  (define make-long-field (make-constructor-with-optional-detailfs long-field))
 
   ;; struct ellipsis-field  
   ;; detail : (Listof Any/c)
   (struct ellipsis-field error-field ()
     #:transparent
-    #:guard (lambda (label detail struct-name)
+    #:guard (lambda (label detail detailfs struct-name)
               (unless (list? detail)
                 (raise-argument-error struct-name "(Listof Any/c)" 1 label detail))
-              (values label detail)))
+              (values label detail detailfs)))  
+  (define make-ellipsis-field (make-constructor-with-optional-detailfs ellipsis-field))
 
   ;; struct error-report
   ;; srcloc : (or/c srcloc? absent?)
@@ -142,21 +155,31 @@
   (define (short-field-format sf)    
     (if (too-long? sf)
         (long-field-format (short-field->long-field sf))
-        (format "  ~a: ~v" (error-field-label sf) (error-field-detail sf))))
+        (if (eq? (error-field-detailfs sf) '~v)
+            (format "  ~a: ~v" (error-field-label sf) (error-field-detail sf))
+            (format "  ~a: ~a" (error-field-label sf) (error-field-detail sf)))))
 
   ;; long-field-format : long-field? -> string?
   ;; Format long-field for error reporting output.
   (define (long-field-format lf)
     (apply string-append (list* (format "  ~a:" (error-field-label lf))
-                                (map (lambda (d) (string-append "\n" (format "   ~v" d)))
+                                (map (lambda (d)
+                                       (string-append "\n"
+                                                      (if (eq? (error-field-detailfs lf) '~v)
+                                                          (format "   ~v" d)
+                                                          (format "   ~a" d))))
                                      (error-field-detail lf)))))                               
 
   ;; ellipsis-field-format : ellipsis-field? -> string?
   ;; Format ellipsis-field for error reporting output.
-  (define (ellipsis-field-format cf)
-    (apply string-append (list* (format "  ~a...:" (error-field-label cf))
-                                (map (lambda (d) (string-append "\n" (format "   ~v" d)))
-                                     (error-field-detail cf)))))
+  (define (ellipsis-field-format ef)
+    (apply string-append (list* (format "  ~a...:" (error-field-label ef))
+                                (map (lambda (d)
+                                       (string-append "\n"
+                                                      (if (eq? (error-field-detailfs ef) '~v)
+                                                          (format "   ~v" d)
+                                                          (format "   ~a" d))))
+                                     (error-field-detail ef)))))
 
   ;; too-long? : any/c -> boolean?
   (define (too-long? sf)
@@ -171,7 +194,8 @@
 
   (define (short-field->long-field sf)
     (long-field (error-field-label sf)
-                (error-field-detail sf)))
+                (error-field-detail sf)
+                (error-field-detailfs sf)))
 
   ;; fields-format : (Listof error-field?) -> string?
   (define (fields-format fs)
@@ -204,15 +228,16 @@
     (string-append srcloc-string name-string message-string continued-messages-string fields-string))
 
   ;; Commonly used fields.
+  ;; expected field always format detail using '~a style.
   (define (expected-short-field detail)
-    (short-field "expected" detail))
+    (make-short-field "expected" detail '~a))
 
   (define (expected-long-field detail)
-    (long-field "expected" detail))
+    (make-long-field "expected" detail '~a))
 
   (define (given-short-field detail)
-    (short-field "given" detail))
+    (make-short-field "given" detail))
 
   (define (given-long-field detail)
-    (long-field "given" detail))
+    (make-long-field "given" detail))
   )

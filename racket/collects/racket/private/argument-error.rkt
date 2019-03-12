@@ -1,6 +1,8 @@
 (module argument-error "pre-base.rkt"
 
   ; module implements new raise-argument-error and its two forms
+  ; module implements new raise-argument-error and its two forms and extends it with
+  ; #:more-info to support adding more details to the exception error output.
 
   (provide (rename-out [new-raise-argument-error raise-argument-error]))
 

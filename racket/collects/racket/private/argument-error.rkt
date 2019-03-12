@@ -4,15 +4,15 @@
 
   (provide (rename-out [new-raise-argument-error raise-argument-error]))
 
-  ; -----------------------------------------------------------------------------------------
-  ; implementation section
+  ;;; -----------------------------------------------------------------------------------------
+  ;;; implementation section
   
   (require "error-reporting.rkt"
            "list.rkt")
   
 
-  ; --------------------------------------------
-  ; helper section
+  ;; --------------------------------------------
+  ;; helper section
   
   (define (raise-one-argument-error name expected v [more-info #f])
     (raise
@@ -150,8 +150,8 @@
                                                          (short-field "provided argument count" args-c)))
                                      (current-continuation-marks))))
 
-  ; --------------------------------------------
-  ; raise-argument-error implementation section
+  ;; --------------------------------------------
+  ;; raise-argument-error implementation section
 
   ; new-raise-argument-error : symbol?
   ;                            string?

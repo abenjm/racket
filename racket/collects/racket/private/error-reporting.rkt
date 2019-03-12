@@ -2,33 +2,50 @@
 
   ; module implements error reporting conforming to Racket error conventions
 
-  (provide error-report
-           error-report?
+  (provide
+   ;; structs
+ 
+   error-report
+   error-report?
            
-           ; replaces short-field struct's constructor
-           (rename-out [make-short-field short-field])
-           short-field?
+   ; replaces short-field struct's constructor
+   (rename-out [make-short-field short-field])
+   short-field?
            
-           ; replaces long-field struct's constructor
-           (rename-out [make-long-field long-field])
-           long-field?
+   ; replaces long-field struct's constructor
+   (rename-out [make-long-field long-field])
+   long-field?
            
-           ; replaces ellipsis-field struct's constructor
-           (rename-out [make-ellipsis-field ellipsis-field])
-           ellipsis-field?
-           
-           error-field?
-           absent
-           absent?
-           error-report->string
-           exn:fail:contract/error-report
-           expected-short-field
-           expected-long-field
-           given-short-field
-           given-long-field)
+   ; replaces ellipsis-field struct's constructor
+   (rename-out [make-ellipsis-field ellipsis-field])
+   ellipsis-field?
 
-  ; -----------------------------------------------------------------------------------------
-  ; implementation section
+   ; predicate matching any short-field, long-field, and ellipsis-field
+   error-field?
+           
+   ; use to indicate lack of provided value for an error-report's field
+   ; since #f can be used in any of error-report's fields, need an alternative
+   ; to indicate lack of valid values.
+   absent
+   absent?)
+
+  (provide
+   ;; procedures
+   
+   ; convert error-report to string for use as exn's message field
+   error-report->string
+
+   ; construct exn:fail:contract using an error-report
+   exn:fail:contract/error-report
+
+   ; commonly used error fields so provide for convenience
+   expected-short-field
+   expected-long-field
+   given-short-field
+   given-long-field)
+
+  ;;; -----------------------------------------------------------------------------------------
+  ;;; implementation section
   
   (require "struct.rkt")
   
@@ -244,8 +261,8 @@
 
     (string-append srcloc-string name-string message-string continued-messages-string fields-string))
 
-  ; --------------------------------------------
-  ; commonly used fields
+  ;; --------------------------------------------
+  ;; commonly used fields
   
   ; Expected fields always format detail using '~a style.
   (define (expected-short-field detail)

@@ -32,11 +32,11 @@
 
 (err/rt-test (raise-argument-error 'form-2b "expected?" 0 'other1 'other2 'other3) 
              exn:fail:contract? 
-             #rx"form-2b: contract violation\n  expected: expected\\?\n  given: 'other1\n  argument position: 1st\n  other arguments...:\n   'other1\n   'other2")
+             #rx"form-2b: contract violation\n  expected: expected\\?\n  given: 'other1\n  argument position: 1st\n  other arguments...:\n   'other2\n   'other3")
 
 (err/rt-test (raise-argument-error 'form-2c "expected?" 1 'other1 'other2 'other3) 
              exn:fail:contract? 
-             #rx"form-2c: contract violation\n  expected: expected\\?\n  given: 'other2\n  argument position: 2nd\n  other arguments...:\n   'other1\n   'other2")
+             #rx"form-2c: contract violation\n  expected: expected\\?\n  given: 'other2\n  argument position: 2nd\n  other arguments...:\n   'other1\n   'other3")
 
 (err/rt-test (raise-argument-error 'form-2d "expected?" 2 'other1 'other2 'other3) 
              exn:fail:contract? 
@@ -61,12 +61,12 @@
 
 (err/rt-test (raise-argument-error 'form-2i "expected?" 2 'other1 'other2 'other3 #:more-info "informative sentence explaining more about the argument") 
              exn:fail:contract? 
-             #rx"form-2i: contract violation;\n #:more-info informative sentence explaining more about the argument\n  expected: expected\\?\n  given: 'other3\n  argument position: 3rd\n  other arguments...:\n   'other1\n   'other2")
+             #rx"form-2i: contract violation;\n informative sentence explaining more about the argument\n  expected: expected\\?\n  given: 'other3\n  argument position: 3rd\n  other arguments...:\n   'other1\n   'other2")
 
 ; make sure line break characters inside #:more-info string are properly handled
 (err/rt-test (raise-argument-error 'form-2j "expected?" 2 'other1 'other2 'other3 #:more-info "informative sentence explaining more about the argument\nanother sentence with even more details\none more sentence") 
              exn:fail:contract? 
-             #rx"form-2j: contract violation;\n #:more-info informative sentence explaining more about the argument\n another sentence with even more details\n one more sentence\n  expected: expected\\?\n  given: 'other3\n  argument position: 3rd\n  other arguments...:\n   'other1\n   'other2")
+             #rx"form-2j: contract violation;\n informative sentence explaining more about the argument\n another sentence with even more details\n one more sentence\n  expected: expected\\?\n  given: 'other3\n  argument position: 3rd\n  other arguments...:\n   'other1\n   'other2")
 
 ; Check expected exceptions when raise-argument-error is misused.
 
@@ -84,7 +84,7 @@
 
 (err/rt-test (raise-argument-error 'form-1d "expected?" 'other #:more-info 'not-string)
              exn:fail:contract?
-             #rx"raise-argument-error: contract violation\n  expected: string\\?\n  given: 'not-string\n  keyword: #more-info\n  arguments...:\n   'test\n   \"expected\"\n   'other")
+             #rx"raise-argument-error: contract violation\n  expected: string\\?\n  given: 'not-string\n  keyword: #more-info\n  arguments...:\n   'form-1d\n   \"expected\"\n   'other")
 
 (err/rt-test (raise-argument-error "form-2a" "expected?" 0 'other) 
              exn:fail:contract? 
@@ -96,7 +96,7 @@
 
 (err/rt-test (raise-argument-error 'form-2c "expected?" 'NaN 'other) 
              exn:fail:contract? 
-             #rx"raise-argument-error: contract violation\n  expected: exact-nonnegative-integer\\?\n  given: 'Nan")
+             #rx"raise-argument-error: contract violation\n  expected: exact-nonnegative-integer\\?\n  given: 'NaN")
 
 (err/rt-test (raise-argument-error 'form-2d "expected?" 5 'other1 'other2 'other3) 
              exn:fail:contract? 
@@ -104,12 +104,12 @@
 
 (err/rt-test (raise-argument-error 'form-2e #:more-info 345 "expected?" 0 'other1 'other2 'other3) 
              exn:fail:contract? 
-             #rx"raise-argument-error: contract violation\n  expected: string\\?\n  given: 345\n  keyword: #more-info\n  arguments...:\n")
+             #rx"raise-argument-error: contract violation\n  expected: string\\?\n  given: 345\n  keyword: #:more-info\n  arguments...:\n")
 
 ; make sure keyword argument is properly reported in error output when raise-argument-error is misused
 (err/rt-test (raise-argument-error 'form-2f 'expected? 0 'other1 #:more-info "string") 
              exn:fail:contract? 
-             #rx"raise-argument-error: contract violation\n  expected: string\\?\n  given: 'expected\n  argument position: 2nd\n  other arguments...:\n   'form-2f\n   0\n   'other1\n  keyword arguments:\n   #:more-info \"string\"")
+             #rx"raise-argument-error: contract violation\n  expected: string\\?\n  given: 'expected\\?\n  argument position: 2nd\n  other arguments...:\n   'form-2f\n   0\n   'other1\n  keyword arguments:\n   #:more-info \"string\"")
 
 
 (report-errs)

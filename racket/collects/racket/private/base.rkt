@@ -1,6 +1,6 @@
 (module base "pre-base.rkt"
 
-  (#%require "argument-error.rkt" ; shadows `raise-argument-error`
+  (#%require "error.rkt" ; shadows `raise-argument-error`
              "hash.rkt"
              "list.rkt" ; shadows `reverse', `mem{q,v,ber}'
              "string.rkt"

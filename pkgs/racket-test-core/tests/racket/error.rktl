@@ -32,11 +32,11 @@
 
 (err/rt-test (raise-argument-error 'form-2b "expected?" 0 'other1 'other2 'other3) 
              exn:fail:contract? 
-             #rx"form-2b: contract violation\n  expected: expected\\?\n  given: 'other3\n  argument position: 1st\n  other arguments...:\n   'other1\n   'other2")
+             #rx"form-2b: contract violation\n  expected: expected\\?\n  given: 'other1\n  argument position: 1st\n  other arguments...:\n   'other1\n   'other2")
 
 (err/rt-test (raise-argument-error 'form-2c "expected?" 1 'other1 'other2 'other3) 
              exn:fail:contract? 
-             #rx"form-2c: contract violation\n  expected: expected\\?\n  given: 'other3\n  argument position: 2nd\n  other arguments...:\n   'other1\n   'other2")
+             #rx"form-2c: contract violation\n  expected: expected\\?\n  given: 'other2\n  argument position: 2nd\n  other arguments...:\n   'other1\n   'other2")
 
 (err/rt-test (raise-argument-error 'form-2d "expected?" 2 'other1 'other2 'other3) 
              exn:fail:contract? 
@@ -45,15 +45,15 @@
 ; make sure ordinal position names are correct for 11, 12, 13
 (err/rt-test (raise-argument-error 'form-2e "expected?" 10 'other1 'other2 'other3  'other4 'other5 'other6 'other7 'other8 'other9 'other10 'other11 'other12 'other13 'other14) 
              exn:fail:contract? 
-             #rx"form-2e: contract violation\n  expected: expected\\?\n  given: 'other3\n  argument position: 11th\n")
+             #rx"form-2e: contract violation\n  expected: expected\\?\n  given: 'other11\n  argument position: 11th\n")
 
 (err/rt-test (raise-argument-error 'form-2f "expected?" 11 'other1 'other2 'other3  'other4 'other5 'other6 'other7 'other8 'other9 'other10 'other11 'other12 'other13 'other14) 
              exn:fail:contract? 
-             #rx"form-2f: contract violation\n  expected: expected\\?\n  given: 'other3\n  argument position: 12th\n")
+             #rx"form-2f: contract violation\n  expected: expected\\?\n  given: 'other12\n  argument position: 12th\n")
 
 (err/rt-test (raise-argument-error 'form-2g "expected?" 12 'other1 'other2 'other3  'other4 'other5 'other6 'other7 'other8 'other9 'other10 'other11 'other12 'other13 'other14) 
              exn:fail:contract? 
-             #rx"form-2g: contract violation\n  expected: expected\\?\n  given: 'other3\n  argument position: 12th\n")
+             #rx"form-2g: contract violation\n  expected: expected\\?\n  given: 'other13\n  argument position: 13th\n")
 
 (err/rt-test (raise-argument-error 'form-2h #:more-info "informative sentence explaining more about the argument" "expected?" 0 'other) 
              exn:fail:contract? 

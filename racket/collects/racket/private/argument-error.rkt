@@ -167,6 +167,7 @@
   ; Enchanced with addition of #:more-info keyword to include more details about the
   ; argument in the exception's reported error output.
   (define (raise-argument-error name expected v #:more-info [more-info #f] . other-vs)
+    (define empty-cmarks-set (continuation-marks #f))
     (unless (symbol? name)
       (raise-multiple-arguments-error 'raise-argument-error
                                       "symbol?"
@@ -200,8 +201,8 @@
 
     (cond [(null? other-vs)
            ; no extra vs supplied so assume first form of `raise-argument-error`
-           (raise-one-argument-error name expected v more-info (current-continuation-marks))]
-          ; otherwise assume second form of `raise-argument-error` so
+           (raise-one-argument-error name expected v more-info empty-cmarks-set)]
+          ; else assume second form of `raise-argument-error` so
           ; v must be exact-nonnegative-integer? representing position of the arguments
           [else
            (unless (exact-nonnegative-integer? v)
@@ -222,12 +223,12 @@
                                          expected
                                          (car other-vs)
                                          more-info
-                                         (current-continuation-marks))
+                                         empty-cmarks-set)
                (raise-multiple-arguments-error name
                                                expected
                                                v
                                                other-vs
                                                '()
                                                more-info
-                                               (current-continuation-marks)))]))
+                                               empty-cmarks-set))]))
   )

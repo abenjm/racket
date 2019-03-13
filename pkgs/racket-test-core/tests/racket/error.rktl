@@ -111,5 +111,8 @@
              exn:fail:contract? 
              #rx"raise-argument-error: contract violation\n  expected: string\\?\n  given: 'expected\\?\n  argument position: 2nd\n  other arguments...:\n   'form-2f\n   0\n   'other1\n  keyword arguments...:\n   #:more-info \"string\"")
 
+(require racket/private/error-reporting)
+
+(define err-rpt (error-report (absent) (absent) (absent) (absent) (absent)))
 
 (report-errs)

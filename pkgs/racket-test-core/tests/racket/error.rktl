@@ -84,7 +84,7 @@
 
 (err/rt-test (raise-argument-error 'form-1d "expected?" 'other #:more-info 'not-string)
              exn:fail:contract?
-             #rx"raise-argument-error: contract violation\n  expected: string\\?\n  given: 'not-string\n  keyword: #more-info\n  arguments...:\n   'form-1d\n   \"expected\"\n   'other")
+             #rx"raise-argument-error: contract violation\n  expected: string\\?\n  given: 'not-string\n  keyword: #:more-info\n  arguments...:\n   'form-1d\n   \"expected\"\n   'other")
 
 (err/rt-test (raise-argument-error "form-2a" "expected?" 0 'other) 
              exn:fail:contract? 
@@ -109,7 +109,7 @@
 ; make sure keyword argument is properly reported in error output when raise-argument-error is misused
 (err/rt-test (raise-argument-error 'form-2f 'expected? 0 'other1 #:more-info "string") 
              exn:fail:contract? 
-             #rx"raise-argument-error: contract violation\n  expected: string\\?\n  given: 'expected\\?\n  argument position: 2nd\n  other arguments...:\n   'form-2f\n   0\n   'other1\n  keyword arguments:\n   #:more-info \"string\"")
+             #rx"raise-argument-error: contract violation\n  expected: string\\?\n  given: 'expected\\?\n  argument position: 2nd\n  other arguments...:\n   'form-2f\n   0\n   'other1\n  keyword arguments...:\n   #:more-info \"string\"")
 
 
 (report-errs)

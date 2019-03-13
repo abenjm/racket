@@ -84,7 +84,7 @@
 
 (err/rt-test (raise-argument-error 'form-1d "expected?" 'other #:more-info 'not-string)
              exn:fail:contract?
-             #rx"raise-argument-error: contract violation\n  expected: string\\?\n  given: 'not-string\n  keyword: #:more-info\n  arguments...:\n   'form-1d\n   \"expected\"\n   'other")
+             #rx"raise-argument-error: contract violation\n  expected: string\\?\n  given: 'not-string\n  keyword: #:more-info\n  arguments...:\n   'form-1d\n   \"expected\\?\"\n   'other")
 
 (err/rt-test (raise-argument-error "form-2a" "expected?" 0 'other) 
              exn:fail:contract? 

@@ -42,14 +42,20 @@
   (define (make-bad-positional-argument-section expected bad-pos-0-based args)
     (define bad-value (list-ref args bad-pos-0-based))
     (define other-values (remq bad-value args))
-    (define pos-ordinal-1-based (let* ([pos-str (number->string (+ bad-pos-0-based 1))]
+    (define bad-pos-1-based (+ bad-pos-0-based 1))
+    (define pos-ordinal-str (let* ([pos-str (number->string bad-pos-1-based)]
                                        [last-char (string-ref pos-str (- (string-length pos-str) 1))])
-                                  (cond [(char=? last-char #\1) (string-append pos-str "st")]
+                                  (cond [(or (= bad-pos-1-based 11)
+                                             (= bad-pos-1-based 12)
+                                             (= bad-pos-1-based 13))
+                                         (string-append pos-str "th")]
+                                        [(char=? last-char #\1) (string-append pos-str "st")]
                                         [(char=? last-char #\2) (string-append pos-str "nd")]
+                                        [(char=? last-char #\3) (string-append pos-str "rd")]
                                         [else (string-append pos-str "th")])))
     (values (expected-short-field expected)
             (given-short-field bad-value)
-            (short-field "argument position" pos-ordinal-1-based '~a)
+            (short-field "argument position" pos-ordinal-str '~a)
             ; don't bother make ellipsis-field if other-values is '()
             (if (not (null? other-values)) (ellipsis-field "other arguments" other-values) #f)))
 

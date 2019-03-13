@@ -28,7 +28,7 @@
                               regexp-replace*
                               new-apply-proc)             
              struct
-             (all-from "argument-error.rkt")
+             (all-from "error.rkt")
              (all-from-except "hash.rkt" paired-fold)
              (all-from "list.rkt")
              (all-from-except "string.rkt"

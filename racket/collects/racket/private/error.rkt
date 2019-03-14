@@ -13,7 +13,25 @@
   
 
   ;; --------------------------------------------
-  ;; helper section
+  ;; helpers section
+
+  ; remove-at-pos : exact-nonnegative-integer (listof any/c) -> any/c (listof any/c) (or/c #t #f)
+  ;
+  ; Given a pos and a list, remove-at-pos will remove element from the list at position pos
+  ; and return three values: the found element, a new list without the found element, and #t which
+  ; is a flag indicating element was found and removed from list.
+  ; If the element was not found because pos was >= the length of the list then remove-at-pos
+  ; will return #f, same list identical to the original, and a flag #f to indicate no element was
+  ; found and was not removed from the list.
+  (define (remove-at-pos pos lst)
+    (define (iter found-item lst current-index)
+      (cond
+        [(null? lst) (values #f '() #f)]
+        [(= current-index pos) (values (car lst) (cdr lst) #t)]
+        [else
+         (define-values (found-item reduced-lst found?) (iter #f (cdr lst) (add1 current-index)))
+         (values found-item (cons (car lst) reduced-lst) found?)]))
+    (iter #f lst 0))
   
   (define (raise-one-argument-error name expected v [more-info #f] [cmarks (current-continuation-marks)])
     (raise
@@ -40,19 +58,18 @@
   ; The fourth error-field? instance may actually be #f if only one positional argument
   ; was given in args.
   (define (make-bad-positional-argument-section expected bad-pos-0-based args)
-    (define bad-value (list-ref args bad-pos-0-based))
-    (define other-values (remq bad-value args))
+    (define-values (bad-value other-values found?) (remove-at-pos bad-pos-0-based args))
     (define bad-pos-1-based (+ bad-pos-0-based 1))
     (define pos-ordinal-str (let* ([pos-str (number->string bad-pos-1-based)]
-                                       [last-char (string-ref pos-str (- (string-length pos-str) 1))])
-                                  (cond [(or (= bad-pos-1-based 11)
-                                             (= bad-pos-1-based 12)
-                                             (= bad-pos-1-based 13))
-                                         (string-append pos-str "th")]
-                                        [(char=? last-char #\1) (string-append pos-str "st")]
-                                        [(char=? last-char #\2) (string-append pos-str "nd")]
-                                        [(char=? last-char #\3) (string-append pos-str "rd")]
-                                        [else (string-append pos-str "th")])))
+                                   [last-char (string-ref pos-str (- (string-length pos-str) 1))])
+                              (cond [(or (= bad-pos-1-based 11)
+                                         (= bad-pos-1-based 12)
+                                         (= bad-pos-1-based 13))
+                                     (string-append pos-str "th")]
+                                    [(char=? last-char #\1) (string-append pos-str "st")]
+                                    [(char=? last-char #\2) (string-append pos-str "nd")]
+                                    [(char=? last-char #\3) (string-append pos-str "rd")]
+                                    [else (string-append pos-str "th")])))
     (values (expected-short-field expected)
             (given-short-field bad-value)
             (short-field "argument position" pos-ordinal-str '~a)

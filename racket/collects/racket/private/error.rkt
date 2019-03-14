@@ -190,7 +190,6 @@
   ; Enchanced with addition of #:more-info keyword to include more details about the
   ; argument in the exception's reported error output.
   (define (raise-argument-error name expected v #:more-info [more-info #f] . other-vs)
-    (define empty-cmarks-set (continuation-marks #f))
     (unless (symbol? name)
       (raise-multiple-arguments-error 'raise-argument-error
                                       "symbol?"
@@ -222,12 +221,15 @@
                                       #f
                                       (current-continuation-marks)))
 
+    ; define one (current-continuation-marks) set for all possible ways
+    ; exn:fail:contract can be produced.
+    (define cmarks (current-continuation-marks))
     (cond [(null? other-vs)
            ; no extra vs supplied so assume first form of `raise-argument-error`
-           (raise-one-argument-error name expected v more-info empty-cmarks-set)]
-          ; else assume second form of `raise-argument-error` so
-          ; v must be exact-nonnegative-integer? representing position of the arguments
+           (raise-one-argument-error name expected v more-info cmarks)]
           [else
+           ; else assume second form of `raise-argument-error` so
+           ; v must be exact-nonnegative-integer? representing position of the bad argument.
            (unless (exact-nonnegative-integer? v)
              (raise-multiple-arguments-error 'raise-argument-error
                                              "exact-nonnegative-integer?"
@@ -246,12 +248,12 @@
                                          expected
                                          (car other-vs)
                                          more-info
-                                         empty-cmarks-set)
+                                         cmarks)
                (raise-multiple-arguments-error name
                                                expected
                                                v
                                                other-vs
                                                '()
                                                more-info
-                                               empty-cmarks-set))]))
+                                               cmarks))]))
   )

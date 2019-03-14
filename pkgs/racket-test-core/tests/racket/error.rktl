@@ -68,6 +68,11 @@
              exn:fail:contract? 
              #rx"form-2j: contract violation;\n informative sentence explaining more about the argument\n another sentence with even more details\n one more sentence\n  expected: expected\\?\n  given: 'other3\n  argument position: 3rd\n  other arguments...:\n   'other1\n   'other2")
 
+(err/rt-test (raise-argument-error 'form-2k "expected?" 3 2 2 1 2 1 2) 
+             exn:fail:contract? 
+             #rx"form-2k: contract violation\n  expected: expected\\?\n  given: 2\n  argument position: 4th\n  other arguments...:\n   2\n   2\n   1\n   1\n   2")
+
+
 ; Check expected exceptions when raise-argument-error is misused.
 
 (err/rt-test (raise-argument-error 'form-1a "expected?") 

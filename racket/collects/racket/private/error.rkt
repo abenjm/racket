@@ -39,8 +39,8 @@
                                                    name
                                                    "contract violation"
                                                    (if more-info (list more-info) (absent))
-                                                   (list (expected-short-field expected)
-                                                         (given-short-field v)))
+                                                   (list (expected-field expected)
+                                                         (given-field v)))
                                      cmarks)))
   
 
@@ -70,15 +70,15 @@
                                     [(char=? last-char #\2) (string-append pos-str "nd")]
                                     [(char=? last-char #\3) (string-append pos-str "rd")]
                                     [else (string-append pos-str "th")])))
-    (values (expected-short-field expected)
-            (given-short-field bad-value)
-            (short-field "argument position" pos-ordinal-str '~a)
+    (values (expected-field expected)
+            (given-field bad-value)
+            (error-field "argument position" pos-ordinal-str #:print-mode '~a)
             ; don't bother make ellipsis-field if other-values is '()
-            (if (not (null? other-values)) (ellipsis-field "other arguments" other-values) #f)))
+            (if (not (null? other-values)) (apply ellipsis-field (list* "other arguments" other-values)) #f)))
 
   ; make-positional-argument-section : (listof any/c) -> error-field?
   (define (make-positional-argument-section args)
-    (ellipsis-field "arguments" args))
+    (apply ellipsis-field (list* "arguments" args)))
 
   ; make-bad-keyword-argument-section : string?
   ;                                     keyword?
@@ -96,25 +96,25 @@
   (define (make-bad-keyword-argument-section expected bad-kw kw-args)
     (define bad-kw-pair (assq bad-kw kw-args))
     (define other-kw-pairs (remq bad-kw-pair kw-args))
-    (values (expected-short-field expected)
-            (given-short-field (cdr bad-kw-pair))
-            (short-field "keyword" (car bad-kw-pair) '~a)
+    (values (expected-field expected)
+            (given-field (cdr bad-kw-pair))
+            (error-field "keyword" (car bad-kw-pair) #:print-mode '~a)
             ; don't bother make ellipsis-field if other-kw-pairs is '()
             (if (not (null? other-kw-pairs))
-                (ellipsis-field "other keyword arguments"
-                                (map (lambda (p)
-                                       (format "~a ~v" (car p) (cdr p)))
-                                     other-kw-pairs)
-                                '~a)
+                (apply ellipsis-field (list* "other keyword arguments"
+                                             (map (lambda (p)
+                                                    (format "~a ~v" (car p) (cdr p)))
+                                                  other-kw-pairs))
+                       #:print-mode '~a)
                 #f)))
 
   ; make-keyword-argument-section : (listof (cons keyword? any/c)) -> error-field?
   (define (make-keyword-argument-section kw-args)
-    (ellipsis-field "keyword arguments"
-                    (map (lambda (p)
-                           (format "~a ~v" (car p) (cdr p)))
-                         kw-args)
-                    '~a))
+    (apply ellipsis-field (list* "keyword arguments"
+                                 (map (lambda (p)
+                                        (format "~a ~v" (car p) (cdr p)))
+                                      kw-args))
+           #:print-mode '~a))
 
   ; raise-multiple-arguments-error : symbol?
   ;                                  string?
@@ -172,8 +172,8 @@
                                                    name
                                                    "position index >= provided argument count"
                                                    (absent)
-                                                   (list (short-field "position index" index)
-                                                         (short-field "provided argument count" args-c)))
+                                                   (list (error-field "position index" index)
+                                                         (error-field "provided argument count" args-c)))
                                      cmarks)))
 
   ;; --------------------------------------------

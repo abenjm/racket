@@ -8,20 +8,15 @@
    error-report
    error-report?
            
-   ; replaces short-field struct's constructor
-   (rename-out [make-short-field short-field])
-   short-field?
-           
-   ; replaces long-field struct's constructor
-   (rename-out [make-long-field long-field])
-   long-field?
-           
+   ; replaces error-field struct's constructor
+   (rename-out [make-error-field error-field])
+
+   ; predicate matching any error-field and ellipsis-field
+   error-field?
+   
    ; replaces ellipsis-field struct's constructor
    (rename-out [make-ellipsis-field ellipsis-field])
    ellipsis-field?
-
-   ; predicate matching any short-field, long-field, and ellipsis-field
-   error-field?
            
    ; use to indicate lack of provided value for an error-report's field
    ; since #f can be used in any of error-report's fields, need an alternative
@@ -31,6 +26,9 @@
 
   (provide
    ;; procedures
+
+   ; control how long detail can be printed on one line
+   error-detail-print-width
    
    ; convert error-report to string for use as exn's message field
    error-report->string
@@ -39,15 +37,14 @@
    exn:fail:contract/error-report
 
    ; commonly used error fields so provide for convenience
-   expected-short-field
-   expected-long-field
-   given-short-field
-   given-long-field)
+   expected-field
+   given-field)
 
   ;;; -----------------------------------------------------------------------------------------
   ;;; implementation section
   
-  (require "struct.rkt")
+  (require "struct.rkt"
+           "list.rkt")
   
 
   ; Control how long error details can be in error reporting output.
@@ -69,62 +66,53 @@
   ; <error-report> :-
   ; [<srcloc>:] [<name>:] <message>[;
   ;  <continued-message>] ...
-  ;   [<short-field> | <long-field> | <collapisble-field>]
-  ;   ...
+  ;   [<error-field> | <ellipsis-field>]
+  ;   ... 
   ;
-  ; <short-field> :-
+  ; <error-field> :-
   ; <field>: <detail>
-  ; 
-  ; <long-field> :-
-  ; <field>:
   ;  <detail>
+  ;  ...
   ;
   ; <ellipsis-field> :-
   ; <field>...:
   ;  <detail>
+  ;  ...
 
   ; struct error-field
   ; label : string/c
-  ; detail : any/c
-  ; detailfs (detail-format-style) : (or/c '~a '~v)
-  (struct error-field (label detail detailfs)
+  ; details : (listof any/c)
+  ; indent-all : (or/c #f (not #f)) if #f and details is not empty then first details
+  ;                                 is printed on same line as label and all other details
+  ;                                 are printed on separate lines and indented with respect
+  ;                                 to the label line.
+  ;                                 if not #f and details is not empty then all details
+  ;                                 are printed on new lines and indented.
+  ; print-mode (or/c '~a '~v) controls how detail is printed
+  (struct error-field (label details indent-all? print-mode)
     #:transparent
-    #:guard (lambda (label detail detailfs struct-name)
+    #:guard (lambda (label details indent-all print-mode struct-name)
               (unless (string? label)
-                (raise-argument-error struct-name "string/c" 0 label detail detailfs))
-              (unless (or (eq? detailfs '~a) (eq? detailfs '~v))
-                (raise-argument-error struct-name "(or/c '~a '~v)" 2 label detail detailfs))
-              (values label detail detailfs)))
+                (raise-argument-error struct-name "string?" 0 label details indent-all print-mode))
+              (unless (list? details)
+                (raise-argument-error struct-name "(listof any/c)" 1 label details indent-all print-mode))
+              (unless (or (eq? print-mode '~a) (eq? print-mode '~v))
+                (raise-argument-error struct-name "(or/c '~a '~v)" 3 label details indent-all print-mode))
+              (values label details indent-all print-mode)))
 
-  ; ~v is the default printing style for the field detail
-  ; but allow ~a to be specified instead if desired.
-  (define (make-constructor-with-optional-detailfs struct-name)
-    (lambda (label detail [detailfs '~v])
-      (struct-name label detail detailfs)))
+  ; ~v is the default print mode for the field detail but allow ~a to be specified
+  ; instead if desired.
+  ; indent-all is #f by default.
+  (define (make-error-field label #:indent-all? [indent-all? #f] #:print-mode [print-mode '~v] . details)
+    (error-field label details indent-all? print-mode))
   
-  ; struct short-field  
-  (struct short-field error-field () #:transparent)  
-  (define make-short-field (make-constructor-with-optional-detailfs short-field))
-
-  ; struct long-field  
-  ; detail : (listof any/c)
-  (struct long-field error-field ()
-    #:transparent
-    #:guard (lambda (label detail detailfs struct-name)
-              (unless (list? detail)
-                (raise-argument-error struct-name "(listof any/c)" 1 label detail))
-              (values label detail detailfs)))  
-  (define make-long-field (make-constructor-with-optional-detailfs long-field))
-
   ; struct ellipsis-field  
-  ; detail : (listof any/c)
-  (struct ellipsis-field error-field ()
-    #:transparent
-    #:guard (lambda (label detail detailfs struct-name)
-              (unless (list? detail)
-                (raise-argument-error struct-name "(listof any/c)" 1 label detail))
-              (values label detail detailfs)))  
-  (define make-ellipsis-field (make-constructor-with-optional-detailfs ellipsis-field))
+  ; details : (listof any/c)
+  ; all details are always indented so indent-all? is #t
+  (struct ellipsis-field error-field () #:transparent)
+
+  (define (make-ellipsis-field label #:print-mode [print-mode '~v] . details)
+    (ellipsis-field label details #t print-mode))
 
   ; struct error-report
   ; srcloc : (or/c srcloc? absent?)
@@ -172,72 +160,91 @@
   ; amount of whitespace for <continued-message> grammar form.
   (define (continued-messages-format cms)
     (define cms-format-string " ~a")
-    (apply string-append (map (lambda (m)
-                                (string-append "\n"
-                                               (cond
-                                                 [(string? m) (format cms-format-string (regexp-replace* #rx"\n" m "\n "))]
-                                                 [else (format cms-format-string m)])))
-                              cms)))
+    (foldl (lambda (m result)
+             (define cm-format (cond
+                                 [(string? m) (lambda (m) (format cms-format-string
+                                                                  (regexp-replace* #rx"\n" m "\n ")))]
+                                 [else (lambda (m) (format cms-format-string m))]))
+             (if (string=? result "")
+                 (cm-format m)
+                 (string-append result "\n" (cm-format m))))
+           ""
+           cms))
 
-  ; short-field-format : short-field? -> string?
-  ; Format short-field for error reporting output.
-  ; If it's too long, meaning its printed
-  ; representation exceeds error-detail-print-width then it's converted to
-  ; long-field prior to formatting.
-  (define (short-field-format sf)    
-    (if (too-long? sf)
-        (long-field-format (short-field->long-field sf))
-        (if (eq? (error-field-detailfs sf) '~v)
-            (format "  ~a: ~v" (error-field-label sf) (error-field-detail sf))
-            (format "  ~a: ~a" (error-field-label sf) (error-field-detail sf)))))
-
-  ; long-field-format : long-field? -> string?
-  ; Format long-field for error reporting output.
-  (define (long-field-format lf)
-    (apply string-append (list* (format "  ~a:" (error-field-label lf))
-                                (map (lambda (d)
-                                       (string-append "\n"
-                                                      (if (eq? (error-field-detailfs lf) '~v)
-                                                          (format "   ~v" d)
-                                                          (format "   ~a" d))))
-                                     (error-field-detail lf)))))                               
+  ; error-field-format : error-field? -> string?
+  ; Format error-field for error reporting output.
+  ; If first detail is too long, meaning its printed
+  ; representation exceeds error-detail-print-width then it's
+  ; moved to next line with rest of other details.
+  (define (error-field-format ef)
+    (define formatted-label (format "  ~a:" (error-field-label ef)))
+    (define detail-format (if (eq? (error-field-print-mode ef) '~v)
+                              (lambda (d) (format "~v" d))
+                              (lambda (d) (format "~a" d))))
+    (define details (error-field-details ef))
+    (cond
+      [(null? details) formatted-label]
+      [(or (first-detail-too-long? ef) (error-field-indent-all? ef))
+       (foldl (lambda (d result)
+                (string-append result
+                               "\n"
+                               "   "
+                               (detail-format d)))
+              formatted-label
+              details)]
+      [else
+       (foldl (lambda (d result)
+                (string-append result
+                               "\n"
+                               "   "
+                               (detail-format d)))
+              (string-append formatted-label " " (detail-format (car details)))
+              (cdr details))]))
 
   ; ellipsis-field-format : ellipsis-field? -> string?
   ; Format ellipsis-field for error reporting output.
   (define (ellipsis-field-format ef)
-    (apply string-append (list* (format "  ~a...:" (error-field-label ef))
-                                (map (lambda (d)
-                                       (string-append "\n"
-                                                      (if (eq? (error-field-detailfs ef) '~v)
-                                                          (format "   ~v" d)
-                                                          (format "   ~a" d))))
-                                     (error-field-detail ef)))))
+    (define formatted-label (format "  ~a...:" (error-field-label ef)))
+    (define detail-format (if (eq? (error-field-print-mode ef) '~v)
+                              (lambda (d) (format "~v" d))
+                              (lambda (d) (format "~a" d))))
+    (define details (error-field-details ef))
+    (foldl (lambda (d result)
+             (string-append result
+                            "\n"
+                            "   "
+                            (detail-format d)))
+           formatted-label
+           details))
 
   ; too-long? : any/c -> boolean?
-  ; checks to see if short-field when printed for error output would exceed
+  ; checks to see if error-field's first detail when printed for error output would exceed
   ; (error-detail-print-width)
-  (define (too-long? sf)
-    (define detail (error-field-detail sf))
-    (cond [(and (symbol? detail)
-                (> (string-length (symbol->string detail)) (error-detail-print-width)))
-           #t]
-          [(and (string? detail)
-                (> (string-length detail) (error-detail-print-width)))
-           #t]
-          [else #f]))
-
-  (define (short-field->long-field sf)
-    (long-field (error-field-label sf)
-                (list (error-field-detail sf))
-                (error-field-detailfs sf)))
+  (define (first-detail-too-long? ef)
+    (define details (error-field-details ef))
+    (cond
+      [(null? details) #f]
+      [else
+       (define first-detail (car details))
+       (cond [(and (symbol? first-detail)
+                   (> (string-length (symbol->string first-detail)) (error-detail-print-width)))
+              #t]
+             [(and (string? first-detail)
+                   (> (string-length first-detail) (error-detail-print-width)))
+              #t]
+             [else #f])]))
 
   ; fields-format : (listof error-field?) -> string?
-  (define (fields-format fs)
-    (apply string-append (map (lambda (f) (string-append "\n"
-                                                         (cond [(short-field? f) (short-field-format f)]
-                                                               [(long-field? f) (long-field-format f)]
-                                                               [(ellipsis-field? f) (ellipsis-field-format f)])))
-                              fs)))
+  (define (fields-format fs)    
+    (foldl (lambda (f result)
+             (define field-format (cond
+                                    [(ellipsis-field? f) ellipsis-field-format]
+                                    [(error-field? f) error-field-format]))
+             (if (string=? result "")
+                 (field-format f)
+                 (string-append result "\n" (field-format f))))
+           ""
+           fs))
 
   ; exn:fail:contract/error-report : error-report? continuation-mark-set? -> exn:fail:contract?
   ; Make an exn:fail:contract using error-report as its message.
@@ -253,27 +260,31 @@
     (define continued-messages (error-report-continued-messages err-rpt))
     (define fields (error-report-fields err-rpt))
 
-    (define srcloc-string (if (absent? srcloc) "" (format "~v: " (srcloc->string srcloc))))
+    (define srcloc-string (if (absent? srcloc) "" (format "~a: " (srcloc->string srcloc))))
     (define name-string (if (absent? name) "" (format "~a: " name)))
     (define message-string (if (absent? message) "" (string-append (format "~a" message) (if (absent? continued-messages) "" ";"))))
     (define continued-messages-string (if (absent? continued-messages) "" (continued-messages-format continued-messages)))
     (define fields-string (if (absent? fields) "" (fields-format fields)))
 
-    (string-append srcloc-string name-string message-string continued-messages-string fields-string))
+    (define pieces (list (string-append srcloc-string name-string message-string)
+                         continued-messages-string
+                         fields-string))                  
+
+    (foldl (lambda (p result)
+             (cond
+               [(string=? p "") result]
+               [(string=? result "") p]     
+               [else (string-append result "\n" p)]))
+           ""
+           pieces))
 
   ;; --------------------------------------------
   ;; commonly used fields
   
-  ; Expected fields always format detail using '~a style.
-  (define (expected-short-field detail)
-    (make-short-field "expected" detail '~a))
+  ; Expected fields always format detail using '~a print-mode.
+  (define (expected-field detail)
+    (make-error-field "expected" detail #:print-mode '~a))
 
-  (define (expected-long-field detail)
-    (make-long-field "expected" detail '~a))
-
-  (define (given-short-field detail)
-    (make-short-field "given" detail))
-
-  (define (given-long-field detail)
-    (make-long-field "given" detail))
+  (define (given-field detail)
+    (make-error-field "given" detail))
   )
